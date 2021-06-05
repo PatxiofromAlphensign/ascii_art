@@ -14,7 +14,12 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "ascii_art.h"
+#include "ascii_art.h"
+#include <stb_image.h>
 
+#ifdef C_INCLUDE_PATH && CPATH
+int main(int argc, char **argv) {
+#else
 int main(int argc, char **argv) {
 	ascii_render sRender; /* Stack allocated */
 
@@ -28,29 +33,38 @@ int main(int argc, char **argv) {
 	}
 
 	/* Initialize the render structure */
-	AsciiArtInit(&sRender);
+	//AsciiArtInit(&sRender);
 
 	/* Load the target image */
 	zBlob = AsciiArtLoadImage(argv[1], &width, &height);
-	if (zBlob == 0) {
-		puts("Cannot load image");
-		return -1;
-	}
 
-	/* Allocate a buffer big enough to hold the entire text output */
+	/* if (zBlob == 0) { */
+	/* 	puts("Cannot load image"); */
+	/* 	return -1; */
+	/* } */
+
+	/* /1* Allocate a buffer big enough to hold the entire text output *1/ */
 	nBytes = AsciiArtTextBufSize(&sRender, width, height);
-	zText = malloc(nBytes);
+	
+	zText = malloc(0);
+	int i;
+	while(zText[i]) {
+		sRender.zMatrix[i] = zText[i];
+		i++;
+	}
+	printf("%d",(int)sizeof(sRender.zMatrix));
 
-	/* Finally, process */
-	AsciiArtRender(&sRender, zBlob, &width, &height, zText, 1);
+	/* /1* Finally, process *1/ */
+	//AsciiArtRender(&sRender, zBlob, &width, &height, zText, 1);
 
-	/* Output the result */
-	fwrite(zText, sizeof(char), nBytes, stdout);
-	/* zBlob[] hold the binary ASCII glyphs now */
+	/* /1* Output the result *1/ */
+	/* fwrite(zText, sizeof(char), nBytes, stdout); */
+	/* /1* zBlob[] hold the binary ASCII glyphs now *1/ */
 
-	/* Release memory */
-	free(zText);
-	free(zBlob);
+	/* /1* Release memory *1/ */
+	/* free(zText); */
+	/* free(zBlob); */
 
 	return 0;
 }
+#endif

@@ -15,7 +15,7 @@
 */
 #include <string.h>
 #include <stdint.h>
-#include "ascii_art.h"
+#include <ascii_art.h>
 /*
  * This is the output hex model generated during the training phase. 
  * It contains both the codebook and the decision tree that let you
@@ -24,7 +24,8 @@
  * The model can be downloaded from: https://pixlab.io/art
  */
 static const unsigned char zBin[] = {
-	#include "ascii_art.hex"
+	//#include "ascii_art.hex"
+
 };
 /*
  * Glyph table.
@@ -163,7 +164,6 @@ static void clahe_preprocess(uint8_t out[], uint8_t in[], int nrows, int ncols, 
 
 	I = nrows;
 	J = ncols;
-
 	for (i = 0; i<di; ++i)
 	{
 		for (j = 0; j<dj; ++j)
@@ -261,7 +261,6 @@ static void clahe_preprocess(uint8_t out[], uint8_t in[], int nrows, int ncols, 
 					v01 = imaps[k + 0][l + 1][p];
 					v10 = imaps[k + 1][l + 0][p];
 					v11 = imaps[k + 1][l + 1][p];
-
 					out[i*ldim + j] =
 						(
 						(ics[k + 1] - i)*(jcs[l + 1] - j)*v00 + (ics[k + 1] - i)*(j - jcs[l])*v01 + (i - ics[k])*(jcs[l + 1] - j)*v10 + (i - ics[k])*(j - jcs[l])*v11
@@ -327,17 +326,27 @@ void AsciiArtRender(ascii_render *pRender, unsigned char *zPixel /*IN/OUT*/, int
 		*pnWidth = ncol;
 	}
 }
-#ifdef ART_ENABLE_STB_IMAGE
+//#ifdef ART_ENABLE_STB_IMAGE
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
 /*
 * CAPIREF: Refer to the official documentation for the main purpose of this interface.
 */
-unsigned char * AsciiArtLoadImage(const char * zPath, int * pWidth, int * pHeight)
+
+char * AsciiArtLoadImage(const char * zPath, int * pWidth, int * pHeight)
 {
 	unsigned char *zBlob;
 	int c;
 	zBlob = stbi_load(zPath,pWidth, pHeight, &c, 1);
 	return zBlob;
 }
-#endif /* STB_IMAGE_IMPLEMENTATION */
+
+/* int main() { */
+/*     char path = "me.bmp"; */
+/*     int* h; int* w ; */
+/*     char* img = AsciiArtLoadImage(path, h, w); */
+/*     return 0; */
+
+/* } */
+
+//#endif /* STB_IMAGE_IMPLEMENTATION */

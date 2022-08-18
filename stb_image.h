@@ -6810,7 +6810,7 @@ static char *stbi__hdr_gettoken(stbi__context *z, char *buffer)
    int len=0;
    char c = '\0';
 
-   c = (char) stbi__get8(z);
+   c = (char)stbi__get8(z);
 
    while (!stbi__at_eof(z) && c != '\n') {
       buffer[len++] = c;

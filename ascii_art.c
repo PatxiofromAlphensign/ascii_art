@@ -15,6 +15,7 @@
 */
 #include <string.h>
 #include <stdint.h>
+#include <stdio.h>
 #include <ascii_art.h>
 /*
  * This is the output hex model generated during the training phase. 
@@ -23,14 +24,14 @@
  *
  * The model can be downloaded from: https://pixlab.io/art
  */
-static const unsigned char zBin[] = {
+ const unsigned char zBin[] = {
 	//#include "ascii_art.hex"
 
 };
 /*
  * Glyph table.
  */
-static const unsigned char glyph_char_table[] =
+ const unsigned char glyph_char_table[] =
 {
 	' ', '!', '"', '#', '$', '%', '&', '\'', '(', ')', '*', '+', ',', '-', '.', '/',
 	'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', ':', ';', '<', '=', '>', '?',
@@ -42,12 +43,16 @@ static const unsigned char glyph_char_table[] =
 /*
 * Portion based on the work of Nenad Markus n3ar.
 */
-static void parse_art_model(uint8_t** ppixels, int* n, int* nrows, int* ncols, int32_t** tree, const uint8_t pack[])
+void parse_art_model(uint8_t** ppixels, int* n, int* nrows, int* ncols, int *packi, int32_t** tree, const uint8_t *pack)
 {
+	int ii=0;
+	for(;*(int*)(pack+ii)!=0;ii++);
+	if(ii<10) printf("warning: emptry *.hex model");
 	int i, k;
-	*n = *(int*)&pack[0 * sizeof(int)];
-	*nrows = *(int*)&pack[1 * sizeof(int)];
-	*ncols = *(int*)&pack[2 * sizeof(int)];
+	//*n = *(int*)pack; // does not work
+	*nrows = *(int*)(pack + (1* sizeof(int)));
+	*ncols = *(int*)(pack + (2 * sizeof(int)));
+	*packi = ii;
 	k = 3 * sizeof(int);
 	for (i = 0; i < *n; ++i) {
 		ppixels[i] = (uint8_t*)&pack[k];
@@ -59,7 +64,7 @@ static void parse_art_model(uint8_t** ppixels, int* n, int* nrows, int* ncols, i
 /*
 * Portion based on the work of Nenad Markus n3ar. 
 */
-static int get_tree_output(int32_t* tree, uint8_t* pixels, int ldim)
+ int get_tree_output(int32_t* tree, uint8_t* pixels, int ldim)
 {
 	uint8_t* n = (uint8_t*)&tree[1];
 	int nodeidx = 0;
@@ -77,7 +82,7 @@ static int get_tree_output(int32_t* tree, uint8_t* pixels, int ldim)
 /*
 * Portion based on the work of Nenad Markus n3ar. 
 */
-static void compute_index_matrix(ascii_render *pRender, uint8_t pixels[], int nrows, int ncols, int ldim)
+ void compute_index_matrix(ascii_render *pRender, uint8_t pixels[], int nrows, int ncols, int ldim)
 {
 	int i = 0;
 	int r, c;
@@ -94,12 +99,11 @@ static void compute_index_matrix(ascii_render *pRender, uint8_t pixels[], int nr
 /*
 * Portion based on the work of Nenad Markus n3ar. 
 */
-static void rc_clahem(uint8_t imap[], uint8_t img[], int i0, int j0, int i1, int j1, int ldim, uint8_t s)
+ void rc_clahem(uint8_t imap[], uint8_t img[], int i0, int j0, int i1, int j1, int ldim, uint8_t s)
 {
 #define NBINS 256
 	double p[NBINS];
 	double P[NBINS];
-
 	int i, j, k;
 	int nrows, ncols;
 
@@ -147,7 +151,7 @@ static void rc_clahem(uint8_t imap[], uint8_t img[], int i0, int j0, int i1, int
 /*
 * Portion based on the work of Nenad Markus n3ar. 
 */
-static void clahe_preprocess(uint8_t out[], uint8_t in[], int nrows, int ncols, int di, int dj, uint8_t s)
+ void clahe_preprocess(uint8_t out[], uint8_t in[], int nrows, int ncols, int di, int dj, uint8_t s)
 {
 	int ldim = ncols;
 #define MAXDIVS 16
@@ -270,7 +274,7 @@ static void clahe_preprocess(uint8_t out[], uint8_t in[], int nrows, int ncols, 
 /*
 * Portion based on the work of Nenad Markus n3ar. 
 */
-static void transform_to_ascii(ascii_render *pRender, uint8_t pixels[], int* nrows, int* ncols, unsigned char *zBuf)
+ void transform_to_ascii(ascii_render *pRender, uint8_t pixels[], int* nrows, int* ncols, unsigned char *zBuf)
 {
 	uint8_t *zPtr = zBuf;
 	int ldim = *ncols;
@@ -302,14 +306,14 @@ static void transform_to_ascii(ascii_render *pRender, uint8_t pixels[], int* nro
 void AsciiArtInit(ascii_render *pRender)
 {
  /*	memset(pRender, 0, sizeof(ascii_render));   */
-	parse_art_model(pRender->zGlyphs, &pRender->nGlyphs, &pRender->nRows, &pRender->nCols, &pRender->pTree, zBin);
+	parse_art_model(pRender->zGlyphs, &pRender->nGlyphs, &pRender->nRows,&pRender->packi, &pRender->nCols, &pRender->pTree,  zBin);
 }
 /*
 * CAPIREF: Refer to the official documentation for the main purpose of this interface.
 */
 unsigned int AsciiArtTextBufSize(ascii_render *pRender, int img_width, int img_height)
 {
-	return img_height / pRender->nRows * (img_width / pRender->nCols + 1) * sizeof(uint8_t);
+	return (img_height / ((pRender->nRows==0) ? pRender->nRows : 1)) * (img_width / ((pRender->nCols==0) ?  pRender->nCols + 1 : 1)) * sizeof(uint8_t);
 }
 /*
 * CAPIREF: Refer to the official documentation for the main purpose of this interface.

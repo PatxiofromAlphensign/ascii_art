@@ -13,6 +13,7 @@
  * An Implementation based on the paper:
  * > N. Markus, M. Fratarcangeli, I. S. Pandzic and J. Ahlberg, "Fast Rendering of Image Mosaics and ASCII Art", Computer Graphics Forum, 2015, http://dx.doi.org/10.1111/cgf.12597
  */
+#include<stdint.h>
 #ifndef __ASCIIART_H__
 #define __ASCIIART_H__
 /* Make sure we can call this stuff from C++ */
@@ -40,8 +41,12 @@ struct ascii_render
 	unsigned char zMatrix[INDEX_MATRIX_SZ];
 	int nRows;
 	int nCols;
+	int packi;
 	int* pTree;
 };
+
+void parse_art_model(uint8_t** ppixels, int* n, int* nrows, int* ncols, int *,int32_t** tree, const uint8_t pack[]);
+
 /*
 * CAPIREF: Refer to the official documentation for the main purpose of this interface.
 */
@@ -49,7 +54,7 @@ ART_APIEXPORT void AsciiArtInit(ascii_render *pRender);
 /*
 * CAPIREF: Refer to the official documentation for the main purpose of this interface.
 */
-ART_APIEXPORT unsigned int AsciiArtTextBufSize(ascii_render *pRender, int img_width, int img_height);
+ART_APIEXPORT uint32_t AsciiArtTextBufSize(ascii_render *pRender, int img_width, int img_height);
 /*
 * CAPIREF: Refer to the official documentation for the main purpose of this interface.
 */

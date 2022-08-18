@@ -14,10 +14,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "ascii_art.h"
-#include "ascii_art.h"
 #include <stb_image.h>
 
-#ifdef C_INCLUDE_PATH && CPATH
+extern unsigned char *AsciiArtLoadImage(char*,int*,int*);
+
+#if defined(C_INCLUDE_PATH)  && defined(CPATH)
 int main(int argc, char **argv) {
 #else
 int main(int argc, char **argv) {
@@ -33,7 +34,7 @@ int main(int argc, char **argv) {
 	}
 
 	/* Initialize the render structure */
-	//AsciiArtInit(&sRender);
+	AsciiArtInit(&sRender);
 
 	/* Load the target image */
 	zBlob = AsciiArtLoadImage(argv[1], &width, &height);
@@ -46,13 +47,13 @@ int main(int argc, char **argv) {
 	/* /1* Allocate a buffer big enough to hold the entire text output *1/ */
 	nBytes = AsciiArtTextBufSize(&sRender, width, height);
 	
-	zText = malloc(0);
-	int i;
-	while(zText[i]) {
-		sRender.zMatrix[i] = zText[i];
-		i++;
-	}
-	printf("%d",(int)sizeof(sRender.zMatrix));
+	//zText = malloc(0);
+	//int i;
+	////while(zText[i]) {
+	//	sRender.zMatrix[i] = zText[i];
+	//	i++;
+	//}
+	printf("%d",height);
 
 	/* /1* Finally, process *1/ */
 	//AsciiArtRender(&sRender, zBlob, &width, &height, zText, 1);

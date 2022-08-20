@@ -37,7 +37,7 @@ int main(int argc, char **argv) {
 	AsciiArtInit(&sRender);
 
 	/* Load the target image */
-	zBlob = AsciiArtLoadImage(argv[1], &width, &height);
+	//zBlob = AsciiArtLoadImage(argv[1], &width, &height);
 
 	/* if (zBlob == 0) { */
 	/* 	puts("Cannot load image"); */
@@ -45,7 +45,7 @@ int main(int argc, char **argv) {
 	/* } */
 
 	/* /1* Allocate a buffer big enough to hold the entire text output *1/ */
-	nBytes = AsciiArtTextBufSize(&sRender, width, height);
+	//nBytes = AsciiArtTextBufSize(&sRender, width, height);
 	
 	//zText = malloc(0);
 	//int i;
@@ -53,7 +53,7 @@ int main(int argc, char **argv) {
 	//	sRender.zMatrix[i] = zText[i];
 	//	i++;
 	//}
-	printf("%d",height);
+	printf("%d",sRender.nCols);
 
 	/* /1* Finally, process *1/ */
 	//AsciiArtRender(&sRender, zBlob, &width, &height, zText, 1);

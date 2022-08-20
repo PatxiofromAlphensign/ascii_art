@@ -17,6 +17,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <ascii_art.h>
+#include <stdlib.h>
 /*
  * This is the output hex model generated during the training phase. 
  * It contains both the codebook and the decision tree that let you
@@ -24,9 +25,13 @@
  *
  * The model can be downloaded from: https://pixlab.io/art
  */
- const unsigned char zBin[] = {
-	//#include "ascii_art.hex"
-
+static const unsigned char zBin[] = {
+#if __has_include("ascii_art.hex") 
+#include "ascii_art.hex"
+#define  ascii_include 1
+#else
+#define ascii_include 0
+#endif
 };
 /*
  * Glyph table.
@@ -40,19 +45,54 @@
 	'`', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o',
 	'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z', '{', '|', '}', '~'
 };
+
+int8_t *arr_to_ptr(const uint8_t pack[]) {
+	int ii=0;
+	for(;pack[ii]!=0;ii++) ;
+	uint8_t *ptr = malloc(sizeof(uint8_t)*ii);
+	for(int i=0;i<ii;i++) ptr[i] = pack[i];
+	return ptr;
+}
+
 /*
 * Portion based on the work of Nenad Markus n3ar.
 */
-void parse_art_model(uint8_t** ppixels, int* n, int* nrows, int* ncols, int *packi, int32_t** tree, const uint8_t *pack)
+void parse_art_model_(uint8_t** ppixels, int* n, int* nrows, int* ncols, count_t *packi, int32_t** tree, const uint8_t *pack)
 {
-	int ii=0;
-	for(;*(int*)(pack+ii)!=0;ii++);
-	if(ii<10) printf("warning: emptry *.hex model");
+	int count = 0;
+	for(;*(int*)(pack+count)!=0;count++);
 	int i, k;
-	//*n = *(int*)pack; // does not work
+	long int nn  = *(int*)(pack + (0* sizeof(int)));
+	*n = *(int*)&pack[0];
 	*nrows = *(int*)(pack + (1* sizeof(int)));
 	*ncols = *(int*)(pack + (2 * sizeof(int)));
-	*packi = ii;
+	packi->count_i = count;
+	k = 3 * sizeof(int);
+#if(ascii_include)
+	for (i = 0; i < *n; ++i) {
+#else
+	for (i = 0; i < count; ++i) {
+#endif
+		ppixels[i] = (uint8_t*)&pack[k];
+		k = k + (*nrows / *ncols);
+	}
+	packi->count_k = k;
+	*tree = (int32_t*)(pack+k);
+	for(int ii=0;ii<k;ii++) {
+		*((*tree)+ii) = *(int32_t*)(pack+k+1);
+	}
+}
+
+void parse_tree(int32_t **tree) {
+		
+}
+
+void parse_art_model(uint8_t** ppixels, int* n, int* nrows, int* ncols, int32_t** tree, const uint8_t pack[])
+{
+	int i, k;
+	*n = *(int*)&pack[0 * sizeof(int)];
+	*nrows = *(int*)&pack[1 * sizeof(int)];
+	*ncols = *(int*)&pack[2 * sizeof(int)];
 	k = 3 * sizeof(int);
 	for (i = 0; i < *n; ++i) {
 		ppixels[i] = (uint8_t*)&pack[k];
@@ -60,6 +100,7 @@ void parse_art_model(uint8_t** ppixels, int* n, int* nrows, int* ncols, int *pac
 	}
 	*tree = (int32_t*)&pack[k];
 }
+
 #define BINTEST(r, c, t, pixels, ldim) ( (pixels)[((r)*(ldim))+(c)] > (t) )
 /*
 * Portion based on the work of Nenad Markus n3ar. 
@@ -148,6 +189,76 @@ void parse_art_model(uint8_t** ppixels, int* n, int* nrows, int* ncols, int *pac
 	for (k = 0; k<NBINS; ++k)
 		imap[k] = (uint8_t)((NBINS - 1)*P[k]);
 }
+
+// section based from worthless443  (end)
+int *check_for_same(int *tree, int arr[])  {
+	if(tree[0]==0) return tree;
+	arr[0] =  tree[0];
+	arr[1] = tree[1];
+	int *arr_r ;
+	int size, match;
+	//if(arr[1] > 1 || arr[0] > 1) arr_r = check_for_same(tree+3, arr);
+	arr_r = check_for_same(tree+3, arr);
+	for(size=0;*(int*)(arr_r+size);size++); //printf("%d ", arr_r[size]);
+	printf("%d\n",arr_r[size-1]);
+	//printf("%d\n", size);
+	//arr[0] = (arr_r[size]==tree[1]);
+	//arr[1] = (arr_r[size-1]==tree[0]);
+
+	//match = arr[0]==1 && arr[1]==0;
+	//printf("%d\n", arr_r[0]);
+	return tree;
+} 
+
+int *arr_without_zeros(int *tree, int size) {
+	int *out = malloc(8*size);
+	for(int i=0,j=0;i<size;i++) {
+			if(tree[i]!=51) {
+			out[j] = tree[i];
+			j++;
+		}
+	}
+	return out;
+}
+
+int *check_for_same_(int *tree, int **arr, int **out, int count)  {
+	if(tree[0]==0) {
+		return tree;
+	}
+	for(int i=1;*(tree+i);i++) { 
+			if(tree[0] == tree[i])  tree[i] = 51;
+	}
+	arr[count] = tree;
+	*out = arr[0]; // idk why save it as it is always at idx 0
+	check_for_same_(tree+1, arr, out, ++count);
+      	return tree;
+}
+int get_size(int *ptr) {
+	int i=1;
+	for(;*(ptr+i);i++);
+	return i;
+}
+
+void print_tree(int *tree,int size) {
+    	for(int k=0;k<size;k++) printf("%d ", tree[k]);
+	printf("\n");
+}
+
+int check_same(int *tree) {
+	int i;
+	int *t;
+	int size = get_size(tree);
+	int *arr[size], *out;
+	t = check_for_same_(tree,arr, &out,0);
+	out = arr_without_zeros(out,size);
+	
+	//for(int i=0;i<get_size(tree);i++) if(out[i]==0) return 1;
+	printf("%d : %d",get_size(out), get_size(tree));
+	return (get_size(out)<get_size(t)) ? 1 : 0;
+}
+
+// section based from worthless443 (end)
+
 /*
 * Portion based on the work of Nenad Markus n3ar. 
 */
@@ -300,13 +411,23 @@ void parse_art_model(uint8_t** ppixels, int* n, int* nrows, int* ncols, int *pac
 		if (zPtr) *zPtr++ = '\n';
 	}
 }
+
 /*
 * CAPIREF: Refer to the official documentation for the main purpose of this interface.
 */
 void AsciiArtInit(ascii_render *pRender)
 {
  /*	memset(pRender, 0, sizeof(ascii_render));   */
-	parse_art_model(pRender->zGlyphs, &pRender->nGlyphs, &pRender->nRows,&pRender->packi, &pRender->nCols, &pRender->pTree,  zBin);
+	uint8_t *zBin_ptr = arr_to_ptr(zBin);
+	count_t ct;
+	//parse_art_model_(pRender->zGlyphs, &pRender->nGlyphs, &pRender->nRows, &pRender->nCols,&ct, &pRender->pTree,  zBin);
+	parse_art_model_(pRender->zGlyphs, &pRender->nGlyphs, &pRender->nRows, &pRender->nCols, &ct, &pRender->pTree,  zBin_ptr);
+	uint8_t pixel;
+	//get_tree_output(pRender->pTree, &pixel, 2);
+	int arr[2];
+	printf("%d\n",check_same(pRender->pTree));
+	//print_tree(pRender->pTree);
+	//printf("%d\n", pRender->pTree[1]);
 }
 /*
 * CAPIREF: Refer to the official documentation for the main purpose of this interface.

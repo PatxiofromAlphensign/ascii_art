@@ -36,17 +36,22 @@ extern "C" {
 typedef struct ascii_render ascii_render;
 struct ascii_render
 {
-	int nGlyphs;
 	unsigned char* zGlyphs[256];
 	unsigned char zMatrix[INDEX_MATRIX_SZ];
+	int nGlyphs;
 	int nRows;
 	int nCols;
-	int packi;
-	int* pTree;
+	int *pTree;
 };
 
-void parse_art_model(uint8_t** ppixels, int* n, int* nrows, int* ncols, int *,int32_t** tree, const uint8_t pack[]);
+typedef struct count_ {
+	int count_i, count_k;
+	int tree_i;
+} count_t;
 
+void parse_art_model_(uint8_t** ppixels, int* n, int* nrows, int* ncols, count_t *,int32_t** tree, const uint8_t pack[]);
+
+void parse_art_model(uint8_t** ppixels, int* n, int* nrows, int* ncols, int32_t** tree, const uint8_t pack[]);
 /*
 * CAPIREF: Refer to the official documentation for the main purpose of this interface.
 */

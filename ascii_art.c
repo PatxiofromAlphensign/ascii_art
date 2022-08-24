@@ -257,7 +257,21 @@ int check_same(int *tree) {
 	return (get_size(out)<get_size(t)) ? 1 : 0;
 }
 
+#define getSize(a) sizeof(a)/sizeof(int)
+int check_zeros(int *arr) {
+	int i=0,j=0;
+	while(arr[i]!=-1) {
+		if(arr[i]==0) {
+			arr = arr + i;
+			j++;
+			i=0;
+		}
+		i++;
+	}
+	return j;
+}
 // section based from worthless443 (end)
+//
 
 /*
 * Portion based on the work of Nenad Markus n3ar. 
@@ -425,7 +439,6 @@ void AsciiArtInit(ascii_render *pRender)
 	uint8_t pixel;
 	//get_tree_output(pRender->pTree, &pixel, 2);
 	int arr[2];
-	printf("%d\n",check_same(pRender->pTree));
 	//print_tree(pRender->pTree);
 	//printf("%d\n", pRender->pTree[1]);
 }
@@ -464,6 +477,18 @@ char * AsciiArtLoadImage(const char * zPath, int * pWidth, int * pHeight)
 	int c;
 	zBlob = stbi_load(zPath,pWidth, pHeight, &c, 1);
 	return zBlob;
+}
+
+void getstbi(const char *fname) {
+	int arr[101];
+	const char *matrix = stbi_parse(fname);
+	int x;
+	if(matrix!=NULL) x = *matrix;
+	for(int i=0,k=0;i<50;i++,k++) { 
+	      arr[i] = matrix[i];
+	}
+	arr[101] = -1;
+	if(check_zeros(arr)>10) printf("prolly got an png file or error in parsing\n");
 }
 
 /* int main() { */

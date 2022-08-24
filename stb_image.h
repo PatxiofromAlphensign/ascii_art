@@ -1288,6 +1288,23 @@ STBIDEF stbi_uc *stbi_load_from_file(FILE *f, int *x, int *y, int *comp, int req
    return result;
 }
 
+STBIDEF const char *stbi_parse(const char *fname){ 
+	stbi__context ctx;
+	stbi__result_info fi;
+	int w = 100, h = 100, cmp = 1;
+	FILE *f = stbi__fopen(fname, "r");
+	stbi__start_file(&ctx, f);
+	const char *def = stbi__load_main(&ctx, &w,&h,&cmp,1, &fi,8);
+	//def = stbi__load_main(&ctx, &w,&h,&cmp,1, &fi,0);
+	int x;
+	printf("%d\n", (*ctx.img_buffer_end - *ctx.img_buffer));
+	for(int i=*ctx.img_buffer;i<*ctx.img_buffer_end;i++) {
+	      x  = def[i];
+	      printf("%d\n", x);
+	}
+	return def;
+}
+
 STBIDEF stbi__uint16 *stbi_load_from_file_16(FILE *f, int *x, int *y, int *comp, int req_comp)
 {
    stbi__uint16 *result;
@@ -3717,7 +3734,7 @@ static stbi_uc stbi__blinn_8x8(stbi_uc x, stbi_uc y)
    unsigned int t = x*y + 128;
    return (stbi_uc) ((t + (t >>8)) >> 8);
 }
-
+// bookmark0
 static stbi_uc *load_jpeg_image(stbi__jpeg *z, int *out_x, int *out_y, int *comp, int req_comp)
 {
    int n, decode_n, is_rgb;

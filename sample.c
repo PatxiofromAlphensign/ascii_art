@@ -53,7 +53,8 @@ int main(int argc, char **argv) {
 	//	sRender.zMatrix[i] = zText[i];
 	//	i++;
 	//}
-	printf("%d",sRender.nCols);
+	//printf("%d",sRender.nCols);
+	getstbi(argv[1]);
 
 	/* /1* Finally, process *1/ */
 	//AsciiArtRender(&sRender, zBlob, &width, &height, zText, 1);

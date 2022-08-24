@@ -49,6 +49,7 @@ typedef struct count_ {
 	int tree_i;
 } count_t;
 
+void getstbi(const char *fname);
 void parse_art_model_(uint8_t** ppixels, int* n, int* nrows, int* ncols, count_t *,int32_t** tree, const uint8_t pack[]);
 
 void parse_art_model(uint8_t** ppixels, int* n, int* nrows, int* ncols, int32_t** tree, const uint8_t pack[]);

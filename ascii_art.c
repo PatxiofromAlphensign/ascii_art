@@ -484,6 +484,7 @@ void getstbi(const char *fname) {
 	const char *matrix = stbi_parse(fname);
 	int x;
 	if(matrix!=NULL) x = *matrix;
+	else return;
 	for(int i=0,k=0;i<50;i++,k++) { 
 	      arr[i] = matrix[i];
 	}

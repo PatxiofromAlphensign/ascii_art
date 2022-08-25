@@ -3785,6 +3785,7 @@ static stbi_uc *load_jpeg_image(stbi__jpeg *z, int *out_x, int *out_y, int *comp
                                      y_bot ? r->line1 : r->line0,
                                      y_bot ? r->line0 : r->line1,
                                      r->w_lores, r->hs);
+
             if (++r->ystep >= r->vs) {
                r->ystep = 0;
                r->line0 = r->line1;
@@ -3901,13 +3902,13 @@ void setup_result(stbi__result_info *ri) {
 	ri->bits_per_channel = 8;
 }
 
-stbi__resample *get_resampling(stbi__context *ctx) {
-	stbi__jpeg *j = stbi__malloc(sizeof(stbi__jpeg));
+stbi__resample *get_resampling(stbi__context *ctx, stbi__jpeg *j) {
 	j->s = ctx;
 	int decode_n;
 	stbi__setup_jpeg(j);
 	if(!stbi__decode_jpeg_image(j)) {
 		printf("not a jpeg file\n");
+		return NULL;
 	}
 	if(j->s->img_n) decode_n = j->s->img_n;
 	else decode_n = 4;
@@ -3939,28 +3940,68 @@ stbi__resample *get_resampling(stbi__context *ctx) {
 }
 
 void map_jpeg(stbi__resample *r, stbi__context *ctx, jpeg_mapper *mapper) {
+	int i=0;
 	int hsvs = ctx->img_y * ctx->img_x;
 	while(r->hs!=0) {
+		jpeg_mapper *m = &mapper[i];
 		for(int j=r->hs;j<hsvs;j+=r->w_lores) {
-				mapper->hs_mtl +=  r->w_lores * j;
+				mapper->hs_mtl +=  j - r->w_lores ;
 			}
-		  	mapper->hs_mtl -= mapper->hs_mtl/ctx->img_n;
-			printf("%d\n", mapper->hs_mtl);
+		  	m->hs_mtl = (mapper->hs_mtl) * mapper->hs_mtl/(ctx->img_x*ctx->img_y);
 			r++;
+		i++;
 		}
+}
+
+void __resample(stbi__jpeg *j, stbi__resample *resmp) {
+	int i=1,k=0;
+	int decode_n = j->s->img_n;
+	stbi_uc *out[decode_n];
+	stbi__resample *r = &resmp[0];
+	while(r->ystep<=decode_n) {
+		 printf("%d | %d\n", r->ystep, r->vs);
+		 r = &resmp[i];
+		 int y_bot = r->ystep >= r->vs;
+		 if(r->ystep<=r->vs) { 
+			 printf("coming\n");
+			 //out[k] = r->resample(j->img_comp[i].linebuf,
+                         //            y_bot ? r->line1 : r->line0,
+                         //            y_bot ? r->line0 : r->line1,
+                         //            r->w_lores, r->hs);
+			 k++;
+		 }
+		 else if(r->ystep>r->vs) {
+			 r->ystep+=1;	
+		 }
+		 if(r->ystep==r->vs) break;
+		 if(i>10) break;
+		 i++;
+	}
+}
+
+void print_mapper(jpeg_mapper *mapper) {
+	while(mapper->hs_mtl>0) {
+		printf("%d\n", mapper->hs_mtl);
+		mapper++;
+	}
 }
 
 STBIDEF const char *stbi_parse(const char *fname) {
 	stbi__context ctx;
 	stbi__result_info ri;
-	jpeg_mapper mapper;
+	stbi__jpeg *j = stbi__malloc(sizeof(stbi__jpeg));
+	jpeg_mapper *mapper = stbi__malloc(sizeof(jpeg_mapper)*10);
 	int w=100,h=100,cmp=2;
 	FILE *f = stbi__fopen(fname, "rb");
 	stbi__start_file(&ctx,f);
 	setup_result(&ri);
 	///const char *out = stbi__jpeg_load(&ctx, &w,&h,&cmp,1, &ri);
-	stbi__resample *svec = get_resampling(&ctx);
-	map_jpeg(svec, &ctx, &mapper);
+	stbi__resample *svec = get_resampling(&ctx,j);
+	__resample(j, svec);
+	//printf("%d\n", ++svec->ystep);
+	
+	//map_jpeg(svec, &ctx, mapper);
+	////print_mapper(mapper);
 	//printf("%d\n", mapper.hs_mtl);
 	return NULL;
 }

@@ -1,7 +1,7 @@
 /*
 * ASCII Art: Real-time ASCII Art Rendering Library.
 * Copyright (C) PixLab. https://pixlab.io/art
-* Version 1.3
+* Version 1.2
 * For information on licensing, redistribution of this file, and for a DISCLAIMER OF ALL WARRANTIES
 * please contact:
 *       support@pixlab.io
@@ -15,9 +15,7 @@
 */
 #include <string.h>
 #include <stdint.h>
-#include <stdio.h>
-#include <ascii_art.h>
-#include <stdlib.h>
+#include "ascii_art.h"
 /*
  * This is the output hex model generated during the training phase. 
  * It contains both the codebook and the decision tree that let you
@@ -26,17 +24,12 @@
  * The model can be downloaded from: https://pixlab.io/art
  */
 static const unsigned char zBin[] = {
-#if __has_include("ascii_art.hex") 
-#include "ascii_art.hex"
-#define  ascii_include 1
-#else
-#define ascii_include 0
-#endif
+	#include "ascii_art.hex"
 };
 /*
  * Glyph table.
  */
- const unsigned char glyph_char_table[] =
+static const unsigned char glyph_char_table[] =
 {
 	' ', '!', '"', '#', '$', '%', '&', '\'', '(', ')', '*', '+', ',', '-', '.', '/',
 	'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', ':', ';', '<', '=', '>', '?',
@@ -45,49 +38,10 @@ static const unsigned char zBin[] = {
 	'`', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o',
 	'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z', '{', '|', '}', '~'
 };
-
-int8_t *arr_to_ptr(const uint8_t pack[]) {
-	int ii=0;
-	for(;pack[ii]!=0;ii++) ;
-	uint8_t *ptr = malloc(sizeof(uint8_t)*ii);
-	for(int i=0;i<ii;i++) ptr[i] = pack[i];
-	return ptr;
-}
-
 /*
 * Portion based on the work of Nenad Markus n3ar.
 */
-void parse_art_model_(uint8_t** ppixels, int* n, int* nrows, int* ncols, count_t *packi, int32_t** tree, const uint8_t *pack)
-{
-	int count = 0;
-	for(;*(int*)(pack+count)!=0;count++);
-	int i, k;
-	long int nn  = *(int*)(pack + (0* sizeof(int)));
-	*n = *(int*)&pack[0];
-	*nrows = *(int*)(pack + (1* sizeof(int)));
-	*ncols = *(int*)(pack + (2 * sizeof(int)));
-	packi->count_i = count;
-	k = 3 * sizeof(int);
-#if(ascii_include)
-	for (i = 0; i < *n; ++i) {
-#else
-	for (i = 0; i < count; ++i) {
-#endif
-		ppixels[i] = (uint8_t*)&pack[k];
-		k = k + (*nrows / *ncols);
-	}
-	packi->count_k = k;
-	*tree = (int32_t*)(pack+k);
-	for(int ii=0;ii<k;ii++) {
-		*((*tree)+ii) = *(int32_t*)(pack+k+1);
-	}
-}
-
-void parse_tree(int32_t **tree) {
-		
-}
-
-void parse_art_model(uint8_t** ppixels, int* n, int* nrows, int* ncols, int32_t** tree, const uint8_t pack[])
+static void parse_art_model(uint8_t** ppixels, int* n, int* nrows, int* ncols, int32_t** tree, const uint8_t pack[])
 {
 	int i, k;
 	*n = *(int*)&pack[0 * sizeof(int)];
@@ -100,12 +54,11 @@ void parse_art_model(uint8_t** ppixels, int* n, int* nrows, int* ncols, int32_t*
 	}
 	*tree = (int32_t*)&pack[k];
 }
-
 #define BINTEST(r, c, t, pixels, ldim) ( (pixels)[((r)*(ldim))+(c)] > (t) )
 /*
 * Portion based on the work of Nenad Markus n3ar. 
 */
- int get_tree_output(int32_t* tree, uint8_t* pixels, int ldim)
+static int get_tree_output(int32_t* tree, uint8_t* pixels, int ldim)
 {
 	uint8_t* n = (uint8_t*)&tree[1];
 	int nodeidx = 0;
@@ -123,7 +76,7 @@ void parse_art_model(uint8_t** ppixels, int* n, int* nrows, int* ncols, int32_t*
 /*
 * Portion based on the work of Nenad Markus n3ar. 
 */
- void compute_index_matrix(ascii_render *pRender, uint8_t pixels[], int nrows, int ncols, int ldim)
+static void compute_index_matrix(ascii_render *pRender, uint8_t pixels[], int nrows, int ncols, int ldim)
 {
 	int i = 0;
 	int r, c;
@@ -140,11 +93,12 @@ void parse_art_model(uint8_t** ppixels, int* n, int* nrows, int* ncols, int32_t*
 /*
 * Portion based on the work of Nenad Markus n3ar. 
 */
- void rc_clahem(uint8_t imap[], uint8_t img[], int i0, int j0, int i1, int j1, int ldim, uint8_t s)
+static void rc_clahem(uint8_t imap[], uint8_t img[], int i0, int j0, int i1, int j1, int ldim, uint8_t s)
 {
 #define NBINS 256
 	double p[NBINS];
 	double P[NBINS];
+
 	int i, j, k;
 	int nrows, ncols;
 
@@ -189,94 +143,10 @@ void parse_art_model(uint8_t** ppixels, int* n, int* nrows, int* ncols, int32_t*
 	for (k = 0; k<NBINS; ++k)
 		imap[k] = (uint8_t)((NBINS - 1)*P[k]);
 }
-
-// section based from worthless443  (end)
-int *check_for_same(int *tree, int arr[])  {
-	if(tree[0]==0) return tree;
-	arr[0] =  tree[0];
-	arr[1] = tree[1];
-	int *arr_r ;
-	int size, match;
-	//if(arr[1] > 1 || arr[0] > 1) arr_r = check_for_same(tree+3, arr);
-	arr_r = check_for_same(tree+3, arr);
-	for(size=0;*(int*)(arr_r+size);size++); //printf("%d ", arr_r[size]);
-	printf("%d\n",arr_r[size-1]);
-	//printf("%d\n", size);
-	//arr[0] = (arr_r[size]==tree[1]);
-	//arr[1] = (arr_r[size-1]==tree[0]);
-
-	//match = arr[0]==1 && arr[1]==0;
-	//printf("%d\n", arr_r[0]);
-	return tree;
-} 
-
-int *arr_without_zeros(int *tree, int size) {
-	int *out = malloc(8*size);
-	for(int i=0,j=0;i<size;i++) {
-			if(tree[i]!=51) {
-			out[j] = tree[i];
-			j++;
-		}
-	}
-	return out;
-}
-
-int *check_for_same_(int *tree, int **arr, int **out, int count)  {
-	if(tree[0]==0) {
-		return tree;
-	}
-	for(int i=1;*(tree+i);i++) { 
-			if(tree[0] == tree[i])  tree[i] = 51;
-	}
-	arr[count] = tree;
-	*out = arr[0]; // idk why save it as it is always at idx 0
-	check_for_same_(tree+1, arr, out, ++count);
-      	return tree;
-}
-int get_size(int *ptr) {
-	int i=1;
-	for(;*(ptr+i);i++);
-	return i;
-}
-
-void print_tree(int *tree,int size) {
-    	for(int k=0;k<size;k++) printf("%d ", tree[k]);
-	printf("\n");
-}
-
-int check_same(int *tree) {
-	int i;
-	int *t;
-	int size = get_size(tree);
-	int *arr[size], *out;
-	t = check_for_same_(tree,arr, &out,0);
-	out = arr_without_zeros(out,size);
-	
-	//for(int i=0;i<get_size(tree);i++) if(out[i]==0) return 1;
-	printf("%d : %d",get_size(out), get_size(tree));
-	return (get_size(out)<get_size(t)) ? 1 : 0;
-}
-
-#define getSize(a) sizeof(a)/sizeof(int)
-int check_zeros(int *arr) {
-	int i=0,j=0;
-	while(arr[i]!=-1) {
-		if(arr[i]==0) {
-			arr = arr + i;
-			j++;
-			i=0;
-		}
-		i++;
-	}
-	return j;
-}
-// section based from worthless443 (end)
-//
-
 /*
 * Portion based on the work of Nenad Markus n3ar. 
 */
- void clahe_preprocess(uint8_t out[], uint8_t in[], int nrows, int ncols, int di, int dj, uint8_t s)
+static void clahe_preprocess(uint8_t out[], uint8_t in[], int nrows, int ncols, int di, int dj, uint8_t s)
 {
 	int ldim = ncols;
 #define MAXDIVS 16
@@ -293,6 +163,7 @@ int check_zeros(int *arr) {
 
 	I = nrows;
 	J = ncols;
+
 	for (i = 0; i<di; ++i)
 	{
 		for (j = 0; j<dj; ++j)
@@ -390,6 +261,7 @@ int check_zeros(int *arr) {
 					v01 = imaps[k + 0][l + 1][p];
 					v10 = imaps[k + 1][l + 0][p];
 					v11 = imaps[k + 1][l + 1][p];
+
 					out[i*ldim + j] =
 						(
 						(ics[k + 1] - i)*(jcs[l + 1] - j)*v00 + (ics[k + 1] - i)*(j - jcs[l])*v01 + (i - ics[k])*(jcs[l + 1] - j)*v10 + (i - ics[k])*(j - jcs[l])*v11
@@ -399,7 +271,7 @@ int check_zeros(int *arr) {
 /*
 * Portion based on the work of Nenad Markus n3ar. 
 */
- void transform_to_ascii(ascii_render *pRender, uint8_t pixels[], int* nrows, int* ncols, unsigned char *zBuf)
+static void transform_to_ascii(ascii_render *pRender, uint8_t pixels[], int* nrows, int* ncols, unsigned char *zBuf)
 {
 	uint8_t *zPtr = zBuf;
 	int ldim = *ncols;
@@ -425,29 +297,20 @@ int check_zeros(int *arr) {
 		if (zPtr) *zPtr++ = '\n';
 	}
 }
-
 /*
 * CAPIREF: Refer to the official documentation for the main purpose of this interface.
 */
 void AsciiArtInit(ascii_render *pRender)
 {
  /*	memset(pRender, 0, sizeof(ascii_render));   */
-	uint8_t *zBin_ptr = arr_to_ptr(zBin);
-	count_t ct;
-	//parse_art_model_(pRender->zGlyphs, &pRender->nGlyphs, &pRender->nRows, &pRender->nCols,&ct, &pRender->pTree,  zBin);
-	parse_art_model_(pRender->zGlyphs, &pRender->nGlyphs, &pRender->nRows, &pRender->nCols, &ct, &pRender->pTree,  zBin_ptr);
-	uint8_t pixel;
-	//get_tree_output(pRender->pTree, &pixel, 2);
-	int arr[2];
-	//print_tree(pRender->pTree);
-	//printf("%d\n", pRender->pTree[1]);
+	parse_art_model(pRender->zGlyphs, &pRender->nGlyphs, &pRender->nRows, &pRender->nCols, &pRender->pTree, zBin);
 }
 /*
 * CAPIREF: Refer to the official documentation for the main purpose of this interface.
 */
 unsigned int AsciiArtTextBufSize(ascii_render *pRender, int img_width, int img_height)
 {
-	return (img_height / ((pRender->nRows==0) ? pRender->nRows : 1)) * (img_width / ((pRender->nCols==0) ?  pRender->nCols + 1 : 1)) * sizeof(uint8_t);
+	return img_height / pRender->nRows * (img_width / pRender->nCols + 1) * sizeof(uint8_t);
 }
 /*
 * CAPIREF: Refer to the official documentation for the main purpose of this interface.
@@ -464,18 +327,17 @@ void AsciiArtRender(ascii_render *pRender, unsigned char *zPixel /*IN/OUT*/, int
 		*pnWidth = ncol;
 	}
 }
-//#ifdef ART_ENABLE_STB_IMAGE
+#ifdef ART_ENABLE_STB_IMAGE
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
 /*
 * CAPIREF: Refer to the official documentation for the main purpose of this interface.
 */
-
-char * AsciiArtLoadImage(const char * zPath, int * pWidth, int * pHeight)
+unsigned char * AsciiArtLoadImage(const char * zPath, int * pWidth, int * pHeight)
 {
 	unsigned char *zBlob;
 	int c;
 	zBlob = stbi_load(zPath,pWidth, pHeight, &c, 1);
 	return zBlob;
 }
-
+#endif /* STB_IMAGE_IMPLEMENTATION */

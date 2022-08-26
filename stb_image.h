@@ -3776,6 +3776,7 @@ static stbi_uc *load_jpeg_image(stbi__jpeg *z, int *out_x, int *out_y, int *comp
       if (!output) { stbi__cleanup_jpeg(z); return stbi__errpuc("outofmem", "Out of memory"); }
 
       // now go ahead and resample
+      // ready the coutput
       for (j=0; j < z->s->img_y; ++j) {
          stbi_uc *out = output + n * z->s->img_x * j;
          for (k=0; k < decode_n; ++k) {
@@ -3927,7 +3928,12 @@ stbi__resample *get_resampling(stbi__context *ctx, stbi__jpeg *j) {
          r->w_lores = (j->s->img_x + r->hs-1) / r->hs;
          r->ypos    = 0;
          r->line0   = r->line1 = j->img_comp[i].data;
-
+         if      (r->hs == 1 && r->vs == 1) r->resample = resample_row_1;
+         else if (r->hs == 1 && r->vs == 2) r->resample = stbi__resample_row_v_2;
+         else if (r->hs == 2 && r->vs == 1) r->resample = stbi__resample_row_h_2;
+         else if (r->hs == 2 && r->vs == 2) r->resample = j->resample_row_hv_2_kernel;
+         else                               r->resample = stbi__resample_row_generic;
+ 
 	 int prev,curr;
 	 if(i>0 && i < decode_n -1) {
 	 	prev =  (*(rvec -i+1)).w_lores;
@@ -3953,37 +3959,58 @@ void map_jpeg(stbi__resample *r, stbi__context *ctx, jpeg_mapper *mapper) {
 		}
 }
 
-void __resample(stbi__jpeg *j, stbi__resample *resmp) {
+stbi_uc **__resample(stbi__jpeg *j, stbi__resample *resmp) {
 	int i=1,k=0;
 	int decode_n = j->s->img_n;
 	stbi_uc *out[decode_n];
 	stbi__resample *r = &resmp[0];
-	while(r->ystep<=decode_n) {
-		 printf("%d | %d\n", r->ystep, r->vs);
+	while(1) {
 		 r = &resmp[i];
-		 int y_bot = r->ystep >= r->vs;
-		 if(r->ystep<=r->vs) { 
-			 printf("coming\n");
-			 //out[k] = r->resample(j->img_comp[i].linebuf,
-                         //            y_bot ? r->line1 : r->line0,
-                         //            y_bot ? r->line0 : r->line1,
-                         //            r->w_lores, r->hs);
+		 int y_bot = r->ystep >= (r->vs>>1);
+		 if(r->ystep<r->vs) { 
+			 out[k] = r->resample(j->img_comp[i].linebuf,
+                                     y_bot ? r->line1 : r->line0,
+                                     y_bot ? r->line0 : r->line1,
+                                     r->w_lores, r->hs);
 			 k++;
 		 }
 		 else if(r->ystep>r->vs) {
-			 r->ystep+=1;	
+			 r->ystep=0;	
 		 }
-		 if(r->ystep==r->vs) break;
-		 if(i>10) break;
+		 if(r->ystep==r->vs) { 
+			 break;
+		 }
 		 i++;
 	}
+	stbi_uc **output  = stbi__malloc(sizeof(out));
+	memcpy(output,out, sizeof(out));
+	return output;
 }
+
 
 void print_mapper(jpeg_mapper *mapper) {
 	while(mapper->hs_mtl>0) {
 		printf("%d\n", mapper->hs_mtl);
 		mapper++;
 	}
+}
+
+//NOTE r->resample() is doing most of the heavy lifting
+stbi_uc *__output(stbi__jpeg *r, stbi_uc **u) {
+	int n = r->s->img_y ;
+	stbi_uc *output = stbi__malloc(sizeof(stbi_uc)*n*n); 
+	for(int i=0;i<r->s->img_y;i++) {
+		stbi_uc *out = output + i * r->s->img_y;
+		for(int j=0;j<r->s->img_x-100;j++) {
+			out[0] = u[0][j];
+			out[1] = u[1][j];
+			out[2] = 255;
+			out+=r->s->img_y;
+		}
+		memcpy(output, out, n);
+	}
+
+	return output;
 }
 
 STBIDEF const char *stbi_parse(const char *fname) {
@@ -3997,9 +4024,21 @@ STBIDEF const char *stbi_parse(const char *fname) {
 	setup_result(&ri);
 	///const char *out = stbi__jpeg_load(&ctx, &w,&h,&cmp,1, &ri);
 	stbi__resample *svec = get_resampling(&ctx,j);
-	__resample(j, svec);
-	//printf("%d\n", ++svec->ystep);
+	stbi_uc **out = __resample(j, svec);
+	if(out[0] == NULL && out[1]) { 
+		printf("is null\n");
+		return NULL;
+	}
 	
+	//stbi_uc uc = out[2][2];
+	stbi_uc  *output = __output(j,out);
+	for(int i=0, k=0;i<800 && output[i]!=0;i++,k++) {
+		printf("%d ", output[i]);
+		if(k==10) {
+			printf("\n");
+			k=0;
+		}
+	}
 	//map_jpeg(svec, &ctx, mapper);
 	////print_mapper(mapper);
 	//printf("%d\n", mapper.hs_mtl);
